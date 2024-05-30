@@ -1,6 +1,12 @@
 .ipynb_checkpoints/
 __pycache__/
 ressources P9/
-mySaves/working_dfs/
-mySaves/cf_results/collab_model.pickle
+mySaves/dev_files/
 news-portal-user-interactions-by-globocom/
+__blobstorage__/
+__queuestorage__/
+__azurite_db_blob__.json
+__azurite_db_blob_extent__.json
+__azurite_db_queue__.json
+__azurite_db_queue_extent__.json
+__azurite_db_table__.json

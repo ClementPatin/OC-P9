@@ -235,7 +235,7 @@ def myDescribe(dataframe):
 
 
 
-def read_all_clicks(clicks_folder_path, usecols = None) : 
+def read_all_clicks(clicks_folder_path, usecols = None, kept_user_ids = None) : 
     '''
     load all "clisks_hour_xxx" .csv and put them in a unique dataframe
 
@@ -243,6 +243,7 @@ def read_all_clicks(clicks_folder_path, usecols = None) :
     ------------
     clicks_folder_path - string : path of the folder containing all .csv
     usecols - list of strings or None : list of column names to use. By default : None (read all columns)
+    kept_user_ids - list_like : for sampling, "user_id"s we want to keep. By default : None (keep all of them)
 
     return :
     --------
@@ -264,6 +265,10 @@ def read_all_clicks(clicks_folder_path, usecols = None) :
         ],
         ignore_index=True
     )
+
+    # handle sampling
+    if kept_user_ids is not None :
+        clicks = clicks.loc[clicks["user_id"].isin(kept_user_ids)]
 
     # handle dtypes
     for col in clicks.columns :
@@ -421,7 +426,7 @@ def read_meta(meta_path, usecols = None) :
 
 
 
-def read_clicks_and_meta(clicks_folder_path, meta_path, clicks_usecols = None, meta_usecols = None, drop_after_prep_cols = None) :
+def read_clicks_and_meta(clicks_folder_path, meta_path, kept_user_ids = None, clicks_usecols = None, meta_usecols = None, drop_after_prep_cols = None) :
     '''
     load all "clisks_hour_xxx.csv"s and the "articles_metadata.csv", prepare them, and merge them
 
@@ -429,6 +434,7 @@ def read_clicks_and_meta(clicks_folder_path, meta_path, clicks_usecols = None, m
     ------------
     clicks_folder_path - string : path of the folder containing all .csv
     meta_path - string : path of "articles_metadata.csv"
+    kept_user_ids - list_like : for sampling, "user_id"s we want to keep. By default : None (keep all of them)
     clicks_usecols - list of strings or None : list of column names to use in "clicks". By default : None (read all columns)
     meta_usecols - list of strings or None : list of column names to use in "articles_metadata". By default : None (read all columns)
     drop_after_prep_cols - list of strings or None : list of column names to drop after preparation and merging. By default : None (keep all columns)
@@ -442,7 +448,7 @@ def read_clicks_and_meta(clicks_folder_path, meta_path, clicks_usecols = None, m
     import pandas as pd
 
     # read clicks with custom function
-    clicks = read_all_clicks(clicks_folder_path=clicks_folder_path, usecols = clicks_usecols)
+    clicks = read_all_clicks(clicks_folder_path=clicks_folder_path, usecols = clicks_usecols, kept_user_ids=kept_user_ids)
     # drop duplicates (articles present several times for the same user)
     clicks.drop_duplicates(subset=["user_id", "click_article_id"], inplace=True, keep="last")
 
@@ -572,7 +578,7 @@ def my_interaction_rating(user_series, article_series) :
 
 
 
-def read_clicks_and_prepare_rating(clicks_folder_path, ref_date_for_seniority, min_seniority=None, max_seniority=None, minimum_count=None, min_count_for_best=None) :
+def read_clicks_and_prepare_rating(clicks_folder_path, ref_date_for_seniority, kept_user_ids=None, min_seniority=None, max_seniority=None, minimum_count=None, min_count_for_best=None) :
     '''
     for collaborative filtering, 
         - load all "clisks_hour_xxx" .csv and put them in a unique dataframe
@@ -582,6 +588,7 @@ def read_clicks_and_prepare_rating(clicks_folder_path, ref_date_for_seniority, m
     ------------
     clicks_folder_path - string : path of the folder containing all .csv
     ref_date - datatime : reference date, reference date, from which seniority is measured
+    kept_user_ids - list_like : for sampling, "user_id"s we want to keep. By default : None (keep all of them)
     min_seniority - int : minimum seniority of each click. By default : None (duration between dates is note lower-bounded)
     max_seniority - int : maximum seniority of each click. By default : None (duration between dates is note upper-bounded)
     minimum_count - int : minimum number of times an article must have been consulted. By default : None (we keep all observations)
@@ -598,7 +605,8 @@ def read_clicks_and_prepare_rating(clicks_folder_path, ref_date_for_seniority, m
     # use custom function to load "clicks"
     data = read_all_clicks(
         clicks_folder_path=clicks_folder_path, 
-        usecols=["user_id", "click_article_id", "click_timestamp"]
+        usecols=["user_id", "click_article_id", "click_timestamp"],
+        kept_user_ids=kept_user_ids
         )
     
     # drop duplicates (articles present several times for the same user)
@@ -686,15 +694,15 @@ def get_top_n(predictions, n=10):
 
 
 
-def cf_top_5(user_id, data_cf_path, trained_model_path) :
+def cf_top_5(user_id, data_cf, trained_model) :
     '''
     return the top_5 recommendations for a given user and a given model
 
     parameters :
     ------------
     user_id - int
-    data_cf_path - string : path to clicks data as DataFrame, with "user_id", "article_id" and "rating" columns, for Surprise compatibility
-    trained_model_path string : path to Surprise model, already trained
+    data_cf - DataFrame : clicks data as DataFrame, with "user_id", "article_id" and "rating" columns, for Surprise compatibility
+    trained_model string : Surprise model, already trained
 
     return :
     --------
@@ -709,20 +717,17 @@ def cf_top_5(user_id, data_cf_path, trained_model_path) :
     from joblib import load
     from surprise import dump as surprise_dump
 
-    # load files
-    X = load(data_cf_path)
-    _, trained_model = surprise_dump.load("mySaves/cf_results/collab_model.pickle")
     # filter on user_id
-    X_filtered = X.loc[X["user_id"] == user_id]
+    X_filtered = data_cf.loc[data_cf["user_id"] == user_id]
     # articles already read
     read_articles = X_filtered["article_id"].unique()
     # all articles
-    all_articles = X["article_id"].unique()
+    all_articles = data_cf["article_id"].unique()
     # get articles_ids NOT already read/clicked by this user
     new_articles_id = np.setdiff1d(all_articles, read_articles, assume_unique=True)
 
     # create an dataframe for Surprise with this user_id, theses article_ids
-    anti_X = pd.DataFrame(columns=X.columns)
+    anti_X = pd.DataFrame(columns=data_cf.columns)
 
     anti_X["article_id"] = new_articles_id
     anti_X["user_id"] = user_id
@@ -765,16 +770,17 @@ def fit_and_save(X_surprise, model_surprise, path) :
     '''
     # imports
     import os
-    from surprise import dump
+    from joblib import dump
     # build trainset
     X = X_surprise.build_full_trainset()
     # fit
     model_surprise.fit(X)
     # dump model
-    dump.dump(file_name=path, algo=model_surprise)
+    dump(model_surprise, path)
 
 
 
+    
 
 
 def embedding_reduction(emb_path, n_components, articles_ids = None) :
@@ -796,7 +802,7 @@ def embedding_reduction(emb_path, n_components, articles_ids = None) :
     emb = pd.read_pickle(emb_path)
 
     # select wanted articles
-    if articles_ids :
+    if articles_ids is not None :
         emb = emb[articles_ids]
 
     # preprocessing
@@ -812,14 +818,14 @@ def embedding_reduction(emb_path, n_components, articles_ids = None) :
 
 
 
-def get_user_top2_categories_and_list_of_ids(data_cb_path, user_id) :
+def get_user_top2_categories_and_list_of_ids(data_cb, user_id) :
     '''
     for a given user and clicks data (with only "user_id", "click_timestamp", "article_id", "category_id" columns), get a his top 2 categories and related read articles.
     the top2 is based on how recently the articles of each category have been read, and the number of occurences of this category
 
     parameters :
     ------------
-    data_cb_path - string : path to clicks data (with only "user_id", "click_timestamp", "article_id", "category_id" columns)
+    data_cb - dataframe : clicks data (with only "user_id", "click_timestamp", "article_id", "category_id" columns)
     user_id - int
 
     return :
@@ -830,12 +836,9 @@ def get_user_top2_categories_and_list_of_ids(data_cb_path, user_id) :
     '''
 
     # imports
-    from joblib import load
     import pandas as pd
     import gc
 
-    # load data_cb
-    data_cb = load(data_cb_path)
     # filter on user_id
     data_user = data_cb.loc[data_cb["user_id"]==user_id].copy()
 
@@ -874,7 +877,7 @@ def get_user_top2_categories_and_list_of_ids(data_cb_path, user_id) :
 
 
 
-def get_cat_embeddings(cat_ids_list, emb_path, meta_path) :
+def get_cat_embeddings(cat_ids_list, emb, meta) :
 
     '''
     from a given list of "category_id"s and articles embeddings and "articles_metadata.csv" files, create a dictionnary with "category_id"s as keys and filtered embeddings as values
@@ -882,8 +885,8 @@ def get_cat_embeddings(cat_ids_list, emb_path, meta_path) :
     parameters :
     ------------
     cat_ids_list - list of int
-    emb_path - string
-    meta_path - string
+    emb - array - articles embeddings
+    meta - dataframe : articles metadata (with "article" and "category_id" columns)
 
     return :
     --------
@@ -892,15 +895,9 @@ def get_cat_embeddings(cat_ids_list, emb_path, meta_path) :
 
     # imports 
     import pandas as pd
-    from joblib import load
-
-    # read meta
-    meta = read_meta(meta_path, usecols = ["article_id", "category_id"]).astype(int)
 
     # read emb_path
-    emb_df = pd.DataFrame(
-        load(emb_path)
-    )
+    emb_df = pd.DataFrame(emb)
 
     # create a dict to store filtered embeddings
     dict_of_embs = {}
@@ -975,7 +972,7 @@ def get_5_content_base_reco_from_dicts(user_dict, emb_dict) :
 
 
 
-def cb_top_5 (user_id, data_cb_path, emb_path, meta_path) :
+def cb_top_5 (user_id, data_cb, emb, meta) :
     '''
     given a user_id and the paths to data files :
         - clicks/meta data (with only "user_id", "click_timestamp", "article_id", "category_id" columns)
@@ -986,9 +983,9 @@ def cb_top_5 (user_id, data_cb_path, emb_path, meta_path) :
     parameters :
     ------------
     user_id - int
-    data_cb_path - string : path to clicks data (with only "user_id", "click_timestamp", "article_id", "category_id" columns)
-    emb_path - string
-    meta_path - string
+    data_cb - dataframe : clicks data (with only "user_id", "click_timestamp", "article_id", "category_id" columns)
+    emb - array - articles embeddings
+    meta - dataframe : articles metadata (with "article" and "category_id" columns)
 
     return :
     --------
@@ -997,9 +994,9 @@ def cb_top_5 (user_id, data_cb_path, emb_path, meta_path) :
     '''
 
     # use the custom function to get the user's top 2 categories and related read articles
-    user_dict = get_user_top2_categories_and_list_of_ids(data_cb_path=data_cb_path, user_id=user_id)
+    user_dict = get_user_top2_categories_and_list_of_ids(data_cb=data_cb, user_id=user_id)
     # use custom function to get the embeddings of all articles belonging to each category 
-    emb_dict = get_cat_embeddings(cat_ids_list=list(user_dict.keys()), emb_path=emb_path, meta_path=meta_path)
+    emb_dict = get_cat_embeddings(cat_ids_list=list(user_dict.keys()), emb=emb, meta=meta)
     # use custmo function to get the recommendations from user_dict and emb_dict
     rec = get_5_content_base_reco_from_dicts(user_dict=user_dict, emb_dict=emb_dict)
 
@@ -1012,11 +1009,10 @@ def cb_top_5 (user_id, data_cb_path, emb_path, meta_path) :
 def cf_and_cb_mix_top_5(
     user_id, 
     n_cf,
-    data_cf_path, 
-    trained_model_path,
-    data_cb_path, 
-    emb_path,
-    meta_path
+    data, 
+    trained_model, 
+    emb,
+    meta
     ) :
     '''
     5 recommendations mixing collaborative filtering and content base
@@ -1025,21 +1021,20 @@ def cf_and_cb_mix_top_5(
     ------------
     user_id - int
     n_cf - int in [0, 5] : number of articles recommended by collaborative filtering
-    data_cf_path - string : path to clicks data, with "user_id", "article_id" and "rating" columns, for Surprise compatibility
-    trained_model_path string : path to Surprise model, already trained
-    data_cb_path - string : path to clicks data (with only "user_id", "click_timestamp", "article_id", "category_id" columns)
-    emb_path - string : path to embeddings of articles
-    meta_path - string : path to articles metadata
+    data - dataframe : clicks data, with "user_id", "article_id" and "rating", "click_timestamp", "category_id" columns
+    trained_model : Surprise model, already trained
+    emb - array - articles embeddings
+    meta - dataframe : articles metadata (with "article" and "category_id" columns)
 
     '''
     # get top 5 for collaborative filtering and content base
     if n_cf != 0 :
-        cf_5 = cf_top_5(user_id=user_id, data_cf_path=data_cf_path, trained_model_path=trained_model_path)
+        cf_5 = cf_top_5(user_id=user_id, data_cf=data[["user_id", "article_id", "rating"]], trained_model=trained_model)
     else :
         cf_5 = []
     
     if n_cf != 5 :
-        cb_5 = cb_top_5(user_id=user_id, data_cb_path=data_cb_path, emb_path=emb_path, meta_path=meta_path)
+        cb_5 = cb_top_5(user_id=user_id, data_cb=data[["user_id", "click_timestamp", "article_id", "category_id"]], emb=emb, meta=meta)
     else :
         cb_5 = []
 

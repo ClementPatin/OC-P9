@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>result - user#{{ user_id }} - n_cf#{{ n_cf }}</title>
+    <style>
+        body {font-family: Calibri;}
+        h1 {text-align: center;}
+        h2 {text-align: center;}
+        div {text-align: center;}
+        form {text-align: left;}
+        </style>
+</head>
+<body>
+    <h1>Welcome to My Content !</h1>
+    <h2>User top 5 recommendations - Testing</h2>
+    <br><br>
+        <form action="/result" method="POST">
+            <label for="selectuser">Please, select a user_id :</label>
+            <select id="selectuser" name="user_id">
+                <option disabled selected value> -- user -- </option>
+                {% for id in listofids %}
+                    <option value= "{{id}}">{{id}}</option>"
+                {% endfor %}
+            </select>
+            <br>
+            <label for="selectncf">and the number of recommendations from Collaborative Filtering :</label>
+            <select id="selectncf" name="n_cf">
+                <option disabled selected value> -- n cf -- </option>
+                {% for n in [0, 1, 2, 3, 4, 5] %}
+                    <option value= "{{n}}">{{n}}</option>"
+                {% endfor %}
+            </select>
+
+            <br><br>
+            <button type="submit">submit</button>
+    </form>
+
+    <br><br>
+
+
+    <h3>For user #{{ user_id }}, we recommend :</h3>
+    {% for article_id in recs %}
+    <p>{{ loop.index }} : {{ article_id }}</p>
+    {% endfor %}
+    <p style="font-size: 12px;">({{ n_cf }} from Collaborative Filtering, {{ 5 - n_cf }} from Content Base)</p>
+</body>
+</html>
