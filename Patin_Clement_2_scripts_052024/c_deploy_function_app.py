@@ -45,8 +45,6 @@ class recommender_deployer :
         # initialize clients
         self.resource_client = ResourceManagementClient(self.credential, subscription_id)
         self.storage_client = StorageManagementClient(self.credential, subscription_id)
-        # self.authorization_client = AuthorizationManagementClient(self.credential, subscription_id)
-        # self.web_client = WebSiteManagementClient(self.credential, subscription_id)
 
     def create_resource_group(self, resource_group_name, location):
         """
@@ -108,29 +106,6 @@ class recommender_deployer :
             "--scope", f'/subscriptions/{self.subscription_id}/resourceGroups/{self.resource_group_name}',
             "--role", "Storage Blob Data Contributor"
             ], shell=True)
-
-        # role_assignment_params = {
-        #     'role_definition_id': f'/subscriptions/{self.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/{self.role_id}',
-        #     'principal_id': principal_id,
-        #     'principal_type': principal_type,
-        #     'scope': resourceGroups/
-        # }
-        # parameters = self.authorization_client.role_assignments.models.RoleAssignmentCreateParameters(
-
-        # )
-        # return self.authorization_client.role_assignments.create(
-        #     scope=f'/subscriptions/{self.subscription_id}/resourceGroups/{self.resource_group_name}',
-        #     role_assignment_name=str(uuid.uuid4()),
-        #     parameters, 
-
-        # )
-        # return self.authorization_client.role_assignments(
-        #     scope=role_assignment_params['scope'],
-        #     role_assignment_name=str(uuid.uuid4()),
-        #     parameters=role_assignment_params
-        # )
-    
-        
 
     def load_files(self, container_name):
         """
@@ -276,11 +251,7 @@ class recommender_deployer :
         """
         delete resource group
         """
-        # delete all resources (storage, plan, function app)
-        # subprocess.call([
-        #      "az", "group", "delete", "--name", self.resource_group_name
-        #      ], shell=True)
-        
+       
         poller = self.resource_client.resource_groups.begin_delete(self.resource_group_name)
         
         print(poller.result())
