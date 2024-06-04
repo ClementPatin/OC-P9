@@ -3,6 +3,7 @@
 #
 import os
 import re
+import time
 import subprocess
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.resource import ResourceManagementClient
@@ -133,7 +134,11 @@ class recommender_deployer :
 
     def load_files(self, container_name):
         """
-        xxxxxxxxxxxxxxx
+        Upload necessary files for recommender system (from mySaves/prod_files) to blob storage
+
+        parameter :
+        -----------
+        container_name - string : name of the container in azure blob storage
         """
         # initialize blob client
         blob_service_client = BlobServiceClient(account_url=f"https://{self.storage_account_name}.blob.core.windows.net", credential=self.credential)
@@ -202,7 +207,7 @@ class recommender_deployer :
             "--storage-account", self.storage_account_name, 
             "--plan", self.app_service_plan_name 
             ], shell=True)
-        
+        time.sleep(5)
         print(f"----> Function app {function_app_name} created")
 
     def assign_identity_to_function_app(self):
@@ -215,14 +220,13 @@ class recommender_deployer :
             "--resource-group", self.resource_group_name, 
             "--name", self.function_app_name
             ], shell=True)
+        time.sleep(5)
         # decode output
         output = output.decode("utf-8")
         # extract principalId
         pattern = r'(?<="principalId":\s)(?:")(\S+)(?:")'
         principalId = re.findall(pattern=pattern, string=output)[0]
-        
         print("----> App principal id :", principalId)
-
         # assign role to managed identity
         subprocess.call([
             "az", "role", "assignment", "create", 
@@ -293,6 +297,7 @@ def main():
         subscription_id=subscription_id,
         user_object_id=user_object_id,
         )
+    print("----> Initiate 'recommender_deployer' class, to carry out all the steps necessary for the deployment of the project to Azure Function App")
     # Create Resource Group
     recDeployer.create_resource_group(
         resource_group_name=resource_group_name,
@@ -323,6 +328,8 @@ def main():
     recDeployer.assign_identity_to_function_app()
     # Create a function app setting for connection
     recDeployer.set_function_app_connection_setting()
+    # Assign Managed Identity to Function App
+    recDeployer.assign_identity_to_function_app()
     # publish webapp
     recDeployer.publish()
 

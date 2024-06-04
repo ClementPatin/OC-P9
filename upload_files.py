@@ -15,7 +15,7 @@ if container_name not in [container["name"] for container in blob_service_client
     blob_service_client.create_container(container_name)
 
 # get files list
-dir_path = "mySaves/prod_files"
+dir_path = "Patin_Clement_2_scripts_052024/mySaves/prod_files"
 blob_names_list = os.listdir(dir_path)
 
 print(blob_names_list)
