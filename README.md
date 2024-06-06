@@ -7,8 +7,8 @@ My Content is a fictitious start-up that wants to encourage reading by recommend
 
 **Objective** : Develop a Minimum Viable Product (**MVP**) of a recommendation system for My Content, allowing relevant articles and books to be recommended to users.
 
-Solutions to explore:
-- Test **different** modeling approaches
+- Solutions to explore:
+    - Test **different** modeling approaches
     - **Collaborative Filtering** - a recommendation technique that uses user interactions with items to make suggestions
     - **Content-Based** - which analyzes the characteristics of the items themselves to make suggestions
 - **Data** at our disposal:
@@ -37,6 +37,22 @@ Solutions to explore:
     - What impact on architectural solutions?
 
 
+## Project notebook
+
+To fully understand the project, please go to `Patin_Clement_2_scripts_052024/a_eda_and_model_selection.ipynb` for EDA, data preparation and model selection.
+
+
+## Build the model
+
+- Go to the scripts directory 
+```bash
+cd "Patin_Clement_2_scripts_052024"
+```
+- Launch script
+```bash
+python b_build_recommender_model.py
+```
+
 ## Run the app
 
 ### Local
@@ -54,7 +70,7 @@ func start
 
 ### to Azure Function App
 For *Azure* deployment, a .py script is in  `Patin_Clement_2_scripts_052024`
-- Go in the scripts directory 
+- Go to the scripts directory 
 ```bash
 cd "Patin_Clement_2_scripts_052024"
 ```

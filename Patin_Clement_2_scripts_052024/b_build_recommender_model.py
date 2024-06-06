@@ -1,7 +1,7 @@
 # My Content
 # BUILD RECOMMENDER MODEL
 
-# (the methodology is explained and illustrated in "1_eda_and_model_selection.ipynb")
+# (the methodology is explained and illustrated in "a_eda_and_model_selection.ipynb")
 
 print("Build hybrid recommendation model")
 
@@ -37,7 +37,7 @@ print("1 - Collaborative Filtering :")
 
 ## 1.1 - select 100000 users
 
-# already selected in "1_eda_and_model_selection.ipynb"
+# already selected in "a_eda_and_model_selection.ipynb"
 kept_user_ids = load("mySaves/dev_files/kept_user_ids.joblib")
 
 ## 1.2 - create a Surprise compatible dataset
@@ -69,7 +69,7 @@ X_cf_light_surprise = Dataset.load_from_df(X_cf_light, reader=reader)
 
 # train SVDpp on X_cf_light_surprise
 if "collab_model_light.joblib" not in os.listdir("mySaves/prod_files") :
-    # get best parameters from our work on "1_eda_and_model_selection.ipynb"
+    # get best parameters from our work on "a_eda_and_model_selection.ipynb"
     cf_results = load("mySaves/cf_results/cf_results.joblib")
     best_parameters = cf_results.loc[cf_results["model_name"]=="SVDpp_opti", "parameters"].values[0]
     # initiate model
